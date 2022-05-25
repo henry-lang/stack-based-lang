@@ -11,8 +11,9 @@ pub struct Token {
 pub enum TokenContents {
     NumberLiteral(i64),
     StringLiteral(String),
+    FuncName(String),
 
-    FuncName(String), // Example: \function
+    FuncDeclName(String), // Example: \function
     OpenCurly,
     CloseCurly,
 }
@@ -25,7 +26,6 @@ pub struct TokenizeError {
 
 pub fn tokenize(source: &str) -> Result<Vec<Token>, TokenizeError> {
     let mut tokens = vec![];
-    let mut line_num = 0usize;
 
     let mut iter = source.chars().enumerate().peekable();
 
@@ -52,7 +52,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, TokenizeError> {
                 }
             }
             '"' | '\'' => {
-                let mut end = i + 1; // Skip first quote
+                let mut end = i + 1;
                 while iter.next_if(|(_, next)| *next != c).is_some() {
                     end += 1;
                 }
@@ -67,23 +67,15 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, TokenizeError> {
 
                 Token {
                     contents: TokenContents::StringLiteral(source[i + 1..end].into()),
-                    span: Span(i, end),
+                    span: Span(i, end + 1),
                 }
             }
             '\\' => {
                 let mut end = i + 1;
 
-                while let Some((_, next)) = iter.next_if(|(_, next)| !next.is_whitespace()) {
+                while let Some(_) = iter.next_if(|(_, next)| !next.is_whitespace()) {
                     // TODO: ensure function name is valid
                     end += 1;
-                }
-
-                if iter.next_if(|(_, next)| next.is_whitespace()).is_none() {
-                    // End of string
-                    return Err(TokenizeError {
-                        message: "found end of file while parsing function name".into(),
-                        span: Span(i, end),
-                    });
                 }
 
                 if i + 1 == end {
@@ -94,24 +86,31 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, TokenizeError> {
                 }
 
                 Token {
-                    contents: TokenContents::FuncName(source[i + 1..end].into()),
+                    contents: TokenContents::FuncDeclName(source[i + 1..end].into()),
                     span: Span(i, end),
                 }
             }
             '{' => Token {
                 contents: TokenContents::OpenCurly,
-                span: Span(i, i),
+                span: Span(i, i + 1),
             },
             '}' => Token {
                 contents: TokenContents::CloseCurly,
-                span: Span(i, i),
+                span: Span(i, i + 1),
             },
-            '\n' => {
-                line_num += 1;
-                continue;
+            ' ' | '\t' | '\n' => continue,
+            _ => {
+                let mut end = i + 1;
+
+                while let Some(_) = iter.next_if(|(_, next)| !next.is_whitespace()) {
+                    end += 1;
+                }
+
+                Token {
+                    contents: TokenContents::FuncName(source[i..end].into()),
+                    span: Span(i, end + i),
+                }
             }
-            ' ' | '\t' => continue,
-            _ => continue,
         });
     }
 
