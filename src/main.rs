@@ -1,3 +1,5 @@
+mod parser;
+mod stack;
 mod tokenizer;
 
 fn main() {
