@@ -1,14 +1,36 @@
-#[derive(Debug)]
+use crate::error::CompileError;
+use std::cmp;
+
+#[derive(Debug, Copy, Clone)]
 pub struct Span(usize, usize);
 
-#[derive(Debug)]
-pub struct Token {
-    contents: TokenContents,
-    span: Span,
+impl Span {
+    pub fn unioned(a: Self, b: Self) -> Self {
+        Self(cmp::min(a.0, b.0), cmp::min(a.1, b.1))
+    }
 }
 
 #[derive(Debug)]
-pub enum TokenContents {
+pub struct Spanned<T> {
+    value: T,
+    span: Span,
+}
+
+impl<T> Spanned<T> {
+    pub fn new(value: T, span: Span) -> Self {
+        Self { value, span }
+    }
+
+    pub fn empty(value: T) -> Self {
+        Self {
+            value,
+            span: Span(0, 0),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Token {
     NumberLiteral(i64),
     StringLiteral(String),
     FuncName(String),
@@ -16,15 +38,72 @@ pub enum TokenContents {
     FuncDeclName(String), // Example: \function
     OpenCurly,
     CloseCurly,
+
+    Eof,
 }
 
-#[derive(Debug)]
-pub struct TokenizeError {
-    message: String,
-    span: Span,
+impl std::fmt::Display for Token {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let kind: TokenKind = self.into();
+
+        write!(f, "{}", kind)
+    }
 }
 
-pub fn tokenize(source: &str) -> Result<Vec<Token>, TokenizeError> {
+pub enum TokenKind {
+    NumberLiteral,
+    StringLiteral,
+    FuncName,
+
+    FuncDeclName,
+    OpenCurly,
+    CloseCurly,
+
+    Eof,
+}
+
+impl From<&Token> for TokenKind {
+    fn from(token: &Token) -> Self {
+        match token {
+            Token::NumberLiteral(_) => Self::NumberLiteral,
+            Token::StringLiteral(_) => Self::StringLiteral,
+            Token::FuncName(_) => Self::FuncName,
+
+            Token::FuncDeclName(_) => Self::FuncDeclName,
+            Token::OpenCurly => Self::OpenCurly,
+            Token::CloseCurly => Self::CloseCurly,
+            Token::Eof => Self::Eof,
+        }
+    }
+}
+
+impl From<&Spanned<Token>> for TokenKind {
+    fn from(spanned: &Spanned<Token>) -> Self {
+        TokenKind::from(&spanned.value)
+    }
+}
+
+impl std::fmt::Display for TokenKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Self::NumberLiteral => "number",
+                Self::StringLiteral => "string",
+                Self::FuncName => "func name",
+
+                Self::FuncDeclName => "func decl name",
+                Self::OpenCurly => "{",
+                Self::CloseCurly => "}",
+
+                Self::Eof => "<eof>",
+            }
+        )
+    }
+}
+
+pub fn tokenize(source: &str) -> Result<Vec<Spanned<Token>>, CompileError> {
     let mut tokens = vec![];
 
     let mut iter = source.chars().enumerate().peekable();
@@ -39,15 +118,12 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, TokenizeError> {
 
                 let value = source[i..end].parse::<i64>();
                 match value {
-                    Ok(num) => Token {
-                        contents: TokenContents::NumberLiteral(num),
-                        span: Span(i, end),
-                    },
+                    Ok(num) => Spanned::new(Token::NumberLiteral(num), Span(i, end)),
                     Err(_) => {
-                        return Err(TokenizeError {
-                            message: "invalid number literal".into(),
-                            span: Span(i, end),
-                        })
+                        return Err(CompileError::Spanned(
+                            "invalid number literal".into(),
+                            Span(i, end),
+                        ))
                     }
                 }
             }
@@ -59,16 +135,16 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, TokenizeError> {
 
                 if iter.next_if(|(_, next)| *next == c).is_none() {
                     // End of string
-                    return Err(TokenizeError {
-                        message: "found end of file while parsing string".into(),
-                        span: Span(i, end),
-                    });
+                    return Err(CompileError::Spanned(
+                        "found end of file while parsing string".into(),
+                        Span(i, end),
+                    ));
                 }
 
-                Token {
-                    contents: TokenContents::StringLiteral(source[i + 1..end].into()),
-                    span: Span(i, end + 1),
-                }
+                Spanned::new(
+                    Token::StringLiteral(source[i + 1..end].into()),
+                    Span(i, end + 1),
+                )
             }
             '\\' => {
                 let mut end = i + 1;
@@ -79,25 +155,16 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, TokenizeError> {
                 }
 
                 if i + 1 == end {
-                    return Err(TokenizeError {
-                        message: "function name is required".into(),
-                        span: Span(i, end),
-                    });
+                    return Err(CompileError::Spanned(
+                        "function name is required".into(),
+                        Span(i, end),
+                    ));
                 }
 
-                Token {
-                    contents: TokenContents::FuncDeclName(source[i + 1..end].into()),
-                    span: Span(i, end),
-                }
+                Spanned::new(Token::FuncDeclName(source[i + 1..end].into()), Span(i, end))
             }
-            '{' => Token {
-                contents: TokenContents::OpenCurly,
-                span: Span(i, i + 1),
-            },
-            '}' => Token {
-                contents: TokenContents::CloseCurly,
-                span: Span(i, i + 1),
-            },
+            '{' => Spanned::new(Token::OpenCurly, Span(i, i + 1)),
+            '}' => Spanned::new(Token::CloseCurly, Span(i, i + 1)),
             ' ' | '\t' | '\n' => continue,
             _ => {
                 let mut end = i + 1;
@@ -106,10 +173,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Token>, TokenizeError> {
                     end += 1;
                 }
 
-                Token {
-                    contents: TokenContents::FuncName(source[i..end].into()),
-                    span: Span(i, end + i),
-                }
+                Spanned::new(Token::FuncName(source[i..end].into()), Span(i, end))
             }
         });
     }

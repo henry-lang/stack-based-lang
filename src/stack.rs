@@ -1,3 +1,5 @@
+use std::mem::MaybeUninit;
+
 struct Stack<T> {
     items: Vec<T>,
 }
@@ -19,21 +21,16 @@ impl<T> Stack<T> {
         self.items.pop().expect("stack underflow")
     }
 
-    pub fn pop_several<const N: usize>(&mut self) -> Option<[T; N]>
-    where
-        T: Default,
-    {
-        let top: [T; N] = [T::default(); N];
+    pub fn pop_several<const N: usize>(&mut self) -> Option<[T; N]> {
+        let mut top: [MaybeUninit<T>; N] = unsafe { MaybeUninit::uninit().assume_init() };
 
-        for i in self.items.len() - 1..self.items.len() - 1 - N {
-            let item = self.items.pop();
-
-            match item {
-                Some(item) => top[i] = item,
+        for element in top.iter_mut().rev() {
+            *element = match self.items.pop() {
+                Some(item) => MaybeUninit::new(item),
                 None => return None,
             }
         }
 
-        Some(top)
+        Some(top.map(|e| unsafe { e.assume_init() }))
     }
 }
