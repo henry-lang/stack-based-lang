@@ -12,8 +12,8 @@ impl Span {
 
 #[derive(Debug)]
 pub struct Spanned<T> {
-    value: T,
-    span: Span,
+    pub value: T,
+    pub span: Span,
 }
 
 impl<T> Spanned<T> {
@@ -21,7 +21,7 @@ impl<T> Spanned<T> {
         Self { value, span }
     }
 
-    pub fn empty(value: T) -> Self {
+    pub const fn empty(value: T) -> Self {
         Self {
             value,
             span: Span(0, 0),
@@ -50,6 +50,7 @@ impl std::fmt::Display for Token {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub enum TokenKind {
     NumberLiteral,
     StringLiteral,
@@ -121,7 +122,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Spanned<Token>>, CompileError> {
                     Ok(num) => Spanned::new(Token::NumberLiteral(num), Span(i, end)),
                     Err(_) => {
                         return Err(CompileError::Spanned(
-                            "invalid number literal".into(),
+                            "Invalid number literal".into(),
                             Span(i, end),
                         ))
                     }
@@ -136,7 +137,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Spanned<Token>>, CompileError> {
                 if iter.next_if(|(_, next)| *next == c).is_none() {
                     // End of string
                     return Err(CompileError::Spanned(
-                        "found end of file while parsing string".into(),
+                        "Found end of file while parsing string".into(),
                         Span(i, end),
                     ));
                 }
@@ -156,7 +157,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Spanned<Token>>, CompileError> {
 
                 if i + 1 == end {
                     return Err(CompileError::Spanned(
-                        "function name is required".into(),
+                        "Function name is required".into(),
                         Span(i, end),
                     ));
                 }

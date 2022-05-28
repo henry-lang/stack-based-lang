@@ -1,5 +1,5 @@
 use crate::error::CompileError;
-use crate::tokenizer::{Spanned, Token};
+use crate::tokenizer::{Spanned, Token, TokenKind};
 
 static EOF: Spanned<Token> = Spanned::empty(Token::Eof);
 
@@ -34,40 +34,48 @@ impl<'a> Parser<'a> {
         Self { tokens, pos: 0 }
     }
 
-    fn current(&self) -> &Token {
-        &self.tokens[self.pos]
+    fn current(&self) -> &'a Spanned<Token> {
+        self.tokens.get(self.pos).unwrap_or_else(|| &EOF)
     }
 
-    fn peek_token(&self) -> &'a Spanned<Token> {
-        match self.tokens.get(self.pos) {
-            Some(t) => t,
-            None => &EOF,
+    fn current_kind(&self) -> TokenKind {
+        self.current().into()
+    }
+
+    fn is_eof(&self) -> bool {
+        self.check(TokenKind::Eof)
+    }
+
+    fn check(&self, kind: TokenKind) -> bool {
+        self.current_kind() == kind
+    }
+
+    fn advance(&mut self) -> &'a Spanned<Token> {
+        let token = self.current();
+        self.pos += 1;
+
+        token
+    }
+
+    fn consume(&mut self, kind: TokenKind) -> Result<&Spanned<Token>, CompileError> {
+        let token = self.advance();
+
+        if TokenKind::from(token) == kind {
+            Ok(token)
+        } else {
+            Err(CompileError::Spanned(
+                format!("Expected {}, but found {}", kind, token.value).into(),
+                token.span,
+            ))
         }
     }
-
-    pub fn is_eof(&self) -> bool {
-        self.check()
-    }
-
-    fn advance(&mut self) -> &Spanned<Token> {}
-
-    pub fn parse_named_func_decl(&mut self) -> Result<ParsedFunc, CompileError> {}
 
     pub fn parse(&mut self) -> Result<ParsedProgram, CompileError> {
         let mut funcs = vec![];
         let mut entry_point = None;
 
-        while let Some(token) = self.peek() {
-            match &token {
-                FuncDeclName(name) => {}
-                _ => {
-                    return Err(CompileError::Spanned(
-                        "expected a function declaration in the global scope".into(),
-                        token.span,
-                    ))
-                }
-            }
-            break;
+        while !self.is_eof() {
+            self.consume(TokenKind::FuncDeclName)?;
         }
 
         Ok(ParsedProgram {
@@ -76,7 +84,7 @@ impl<'a> Parser<'a> {
                 Some(e) => e,
                 None => {
                     return Err(CompileError::General(
-                        "no entry point found for program, try adding \\main {}".into(),
+                        "No entry point found for program, try adding \\main {}".into(),
                     ))
                 }
             },
