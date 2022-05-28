@@ -1,4 +1,5 @@
 use crate::tokenizer::Span;
+use ansi_term::Color::{Red, White};
 
 use std::borrow::Cow;
 
@@ -13,7 +14,12 @@ impl CompileError {
         match self {
             Self::General(_) => {}
             Self::Spanned(msg, _) => {
-                println!("{}", msg)
+                println!(
+                    "{}{}{}",
+                    Red.bold().paint("error"),
+                    White.bold().paint(": "),
+                    White.bold().paint(msg.as_ref())
+                )
             }
         }
 

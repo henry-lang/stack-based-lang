@@ -122,7 +122,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Spanned<Token>>, CompileError> {
                     Ok(num) => Spanned::new(Token::NumberLiteral(num), Span(i, end)),
                     Err(_) => {
                         return Err(CompileError::Spanned(
-                            "Invalid number literal".into(),
+                            "invalid number literal".into(),
                             Span(i, end),
                         ))
                     }
@@ -137,7 +137,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Spanned<Token>>, CompileError> {
                 if iter.next_if(|(_, next)| *next == c).is_none() {
                     // End of string
                     return Err(CompileError::Spanned(
-                        "Found end of file while parsing string".into(),
+                        "found end of file while parsing string".into(),
                         Span(i, end),
                     ));
                 }
@@ -157,7 +157,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Spanned<Token>>, CompileError> {
 
                 if i + 1 == end {
                     return Err(CompileError::Spanned(
-                        "Function name is required".into(),
+                        "function name is required".into(),
                         Span(i, end),
                     ));
                 }

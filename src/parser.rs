@@ -64,7 +64,7 @@ impl<'a> Parser<'a> {
             Ok(token)
         } else {
             Err(CompileError::Spanned(
-                format!("Expected {}, but found {}", kind, token.value).into(),
+                format!("expected {}, but found {}", kind, token.value).into(),
                 token.span,
             ))
         }
@@ -84,7 +84,7 @@ impl<'a> Parser<'a> {
                 Some(e) => e,
                 None => {
                     return Err(CompileError::General(
-                        "No entry point found for program, try adding \\main {}".into(),
+                        "no entry point found for program, try adding \\main {}".into(),
                     ))
                 }
             },
