@@ -8,7 +8,7 @@ type ParserResult<T> = Result<T, CompileError>;
 #[derive(Debug)]
 pub struct Program {
     funcs: Vec<Spanned<Func>>,
-    entry_point: String,
+    entry_point: String, 
 }
 
 #[derive(Debug)]
@@ -146,16 +146,27 @@ impl<'a> Parser<'a> {
 
     pub fn parse(&mut self) -> ParserResult<Program> {
         let mut funcs = vec![];
-        let mut entry_point = "main".into();
+        let mut entry_point = None;
 
         while !self.is_eof() {
-            funcs.push(self.parse_named_func_decl()?);
+            let func = self.parse_named_func_decl()?;
+
+            match &func.value {
+                Func::Named(name, _) => {
+                    if name == "main" {
+                        entry_point = Some(name.clone());
+                    }
+                }
+                _ => unreachable!()
+            }
+
+            funcs.push(func);
         }
 
         Ok(Program {
             funcs,
             entry_point: match entry_point {
-                Some(e) => "".into(),
+                Some(e) => e,
                 None => {
                     return Err(CompileError::General(
                         "no entry point found for program, try adding \\main {}".into(),
