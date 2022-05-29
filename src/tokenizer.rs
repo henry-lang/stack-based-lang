@@ -6,7 +6,7 @@ pub struct Span(usize, usize);
 
 impl Span {
     pub fn unioned(a: Self, b: Self) -> Self {
-        Self(cmp::min(a.0, b.0), cmp::min(a.1, b.1))
+        Self(cmp::min(a.0, b.0), cmp::max(a.1, b.1))
     }
 }
 

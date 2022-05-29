@@ -11,9 +11,9 @@ pub enum CompileError {
 
 impl CompileError {
     pub fn log_and_exit(&self) -> ! {
+        // TODO: add spanned highlighting of errors
         match self {
-            Self::General(_) => {}
-            Self::Spanned(msg, _) => {
+            Self::General(msg) | Self::Spanned(msg, _) => {
                 println!(
                     "{}{}{}",
                     Red.bold().paint("error"),
