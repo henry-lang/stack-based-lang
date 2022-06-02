@@ -1,5 +1,6 @@
 mod error;
 mod parser;
+mod runtime;
 mod stack;
 mod tokenizer;
 
@@ -14,15 +15,18 @@ fn main() {
         .next()
         .unwrap_or_else(|| "main.sbl".into());
 
-    let input = fs::read_to_string(&input_file).unwrap_or_else(|_| {
-        CompileError::General(format!("can't open file {input_file}").into()).log_and_exit()
+    let input = fs::read_to_string(&input_file);
+    let input = input.unwrap_or_else(|_| {
+        CompileError::General(format!("can't open file {input_file}").into()).log_and_exit("")
     });
 
-    let tokens = tokenizer::tokenize(&input).unwrap_or_else(|err| err.log_and_exit());
+    let tokens = tokenizer::tokenize(&input).unwrap_or_else(|err| err.log_and_exit(&input));
+    println!("{:?}", tokens);
 
-    let program = parser::Parser::new(&tokens[..])
+    let mut parser = parser::Parser::new(&tokens[..]);
+    let mut program = parser
         .parse()
-        .unwrap_or_else(|err| err.log_and_exit());
+        .unwrap_or_else(|err| err.log_and_exit(&input));
 
-    println!("{:?}", parsed_program);
+    println!("{:?}", program)
 }

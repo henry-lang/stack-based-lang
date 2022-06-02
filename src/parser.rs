@@ -1,14 +1,23 @@
+use std::collections::HashMap;
+
 use crate::error::CompileError;
 use crate::tokenizer::{Span, Spanned, Token, TokenKind};
 
 static EOF: Spanned<Token> = Spanned::empty(Token::Eof);
+static ENTRY_POINT: &str = "main";
 
 type ParserResult<T> = Result<T, CompileError>;
 
 #[derive(Debug)]
-pub struct Program {
+pub struct Program<'a> {
     funcs: Vec<Spanned<Func>>,
-    entry_point: String, 
+    func_map: HashMap<&'a str, &'a Spanned<Func>>,
+}
+
+impl<'a> Program<'a> {
+    pub fn new(funcs: Vec<Spanned<Func>>) -> Self {
+        Self {funcs, func_map: HashMap::new()}
+    }
 }
 
 #[derive(Debug)]
@@ -146,33 +155,12 @@ impl<'a> Parser<'a> {
 
     pub fn parse(&mut self) -> ParserResult<Program> {
         let mut funcs = vec![];
-        let mut entry_point = None;
 
         while !self.is_eof() {
             let func = self.parse_named_func_decl()?;
-
-            match &func.value {
-                Func::Named(name, _) => {
-                    if name == "main" {
-                        entry_point = Some(name.clone());
-                    }
-                }
-                _ => unreachable!()
-            }
-
             funcs.push(func);
         }
 
-        Ok(Program {
-            funcs,
-            entry_point: match entry_point {
-                Some(e) => e,
-                None => {
-                    return Err(CompileError::General(
-                        "no entry point found for program, try adding \\main {}".into(),
-                    ))
-                }
-            },
-        })
+        Ok(Program::new(funcs))
     }
 }

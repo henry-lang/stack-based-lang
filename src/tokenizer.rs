@@ -2,7 +2,7 @@ use crate::error::CompileError;
 use std::cmp;
 
 #[derive(Debug, Copy, Clone)]
-pub struct Span(usize, usize);
+pub struct Span(pub usize, pub usize);
 
 impl Span {
     pub fn unioned(a: Self, b: Self) -> Self {
@@ -166,7 +166,7 @@ pub fn tokenize(source: &str) -> Result<Vec<Spanned<Token>>, CompileError> {
             }
             '{' => Spanned::new(Token::OpenCurly, Span(i, i + 1)),
             '}' => Spanned::new(Token::CloseCurly, Span(i, i + 1)),
-            ' ' | '\t' | '\n' => continue,
+            ' ' | '\t' | '\n' | '\r' => continue,
             _ => {
                 let mut end = i + 1;
 
