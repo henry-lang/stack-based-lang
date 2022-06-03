@@ -21,7 +21,6 @@ fn main() {
     });
 
     let tokens = tokenizer::tokenize(&input).unwrap_or_else(|err| err.log_and_exit(&input));
-    println!("{:?}", tokens);
 
     let mut parser = parser::Parser::new(&tokens[..]);
     let mut program = parser

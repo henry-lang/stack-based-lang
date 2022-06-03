@@ -1,3 +1,4 @@
+use crate::parser::Func;
 use crate::parser::Program;
 use crate::stack::Stack;
 use std::collections::HashMap;
@@ -9,30 +10,66 @@ pub enum Value<'a> {
 
 impl<'a> std::fmt::Display for Value<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Number(num) => &num.to_string(),
-                Self::String(string) => *string,
-            }
-        )
+        match self {
+            Self::Number(num) => write!(f, "{}", num),
+            Self::String(string) => write!(f, "{}", string),
+        }
     }
 }
 
-type BuiltIn = fn(&Stack<Value>);
+type BuiltIn = fn(&mut Stack<Value>);
 
-pub struct Runtime<'a> {
-    program: &'a Program<'a>,
+pub struct Runtime {
+    funcs: HashMap<String, Func>,
     builtins: HashMap<&'static str, BuiltIn>,
 }
 
-impl<'a> Runtime<'a> {
-    pub fn new(program: &'a Program) -> Self {
-        let mut builtins = HashMap::new();
+impl Runtime {
+    pub fn insert_builtins(&mut self) {
+        self.builtins
+            .insert(".", |stack| println!("{}", stack.pop()));
+        self.builtins.insert("+", |stack| {
+            let operands = stack.pop_several::<2>();
 
-        builtins.insert(".", |stack: &Stack<Value>| println!("{}", stack.pop()));
+            match operands {
+                [Value::Number(lhs), Value::Number(rhs)] => stack.push(Value::Number(lhs + rhs)),
+                _ => panic!(),
+            }
+        });
+        self.builtins.insert("-", |stack| {
+            let operands = stack.pop_several::<2>();
 
-        Self { program, builtins }
+            match operands {
+                [Value::Number(lhs), Value::Number(rhs)] => stack.push(Value::Number(lhs - rhs)),
+                _ => panic!(),
+            }
+        });
+        self.builtins.insert("*", |stack| {
+            let operands = stack.pop_several::<2>();
+
+            match operands {
+                [Value::Number(lhs), Value::Number(rhs)] => stack.push(Value::Number(lhs * rhs)),
+                _ => panic!(),
+            }
+        });
+        self.builtins.insert("/", |stack| {
+            let operands = stack.pop_several::<2>();
+
+            match operands {
+                [Value::Number(lhs), Value::Number(rhs)] => stack.push(Value::Number(lhs / rhs)),
+                _ => panic!(),
+            }
+        });
+    }
+
+    pub fn new(program: Program) -> Self {
+        let mut it = Self {
+            funcs: HashMap::new(),
+            builtins: HashMap::new(),
+        };
+
+        it.insert_builtins();
+
+        it
     }
 }

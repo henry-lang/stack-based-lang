@@ -10,7 +10,7 @@ type ParserResult<T> = Result<T, CompileError>;
 
 #[derive(Debug)]
 pub struct Program<'a> {
-    funcs: Vec<Spanned<Func>>,
+    pub funcs: Vec<Spanned<Func>>,
     func_map: HashMap<&'a str, &'a Spanned<Func>>,
 }
 
