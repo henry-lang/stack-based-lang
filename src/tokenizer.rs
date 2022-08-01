@@ -8,6 +8,10 @@ impl Span {
     pub fn unioned(a: Self, b: Self) -> Self {
         Self(cmp::min(a.0, b.0), cmp::max(a.1, b.1))
     }
+
+    pub fn len(&self) -> usize {
+        self.1 - self.0
+    }
 }
 
 #[derive(Debug)]

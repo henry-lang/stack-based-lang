@@ -1,7 +1,7 @@
+#![feature(int_log)]
+
 mod error;
 mod parser;
-mod runtime;
-mod stack;
 mod tokenizer;
 
 use std::env;
@@ -27,5 +27,5 @@ fn main() {
         .parse()
         .unwrap_or_else(|err| err.log_and_exit(&input));
 
-    println!("{:?}", program)
+    println!("{:?}", program);
 }
