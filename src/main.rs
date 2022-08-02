@@ -1,5 +1,6 @@
 #![feature(int_log)]
 
+mod codegen;
 mod error;
 mod parser;
 mod tokenizer;

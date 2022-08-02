@@ -1,29 +1,38 @@
-use std::collections::HashMap;
-
 use crate::error::CompileError;
 use crate::tokenizer::{Span, Spanned, Token, TokenKind};
+use std::collections::HashMap;
 
 static EOF: Spanned<Token> = Spanned::empty(Token::Eof);
 static ENTRY_POINT: &str = "main";
 
 type ParserResult<T> = Result<T, CompileError>;
+type FuncMap = HashMap<String, Spanned<Func>>;
 
 #[derive(Debug)]
-pub struct Program<'a> {
-    pub funcs: Vec<Spanned<Func>>,
-    func_map: HashMap<&'a str, &'a Spanned<Func>>,
+pub struct Program {
+    funcs: FuncMap,
 }
 
-impl<'a> Program<'a> {
-    pub fn new(funcs: Vec<Spanned<Func>>) -> Self {
-        Self {funcs, func_map: HashMap::new()}
+impl Program {
+
+    pub fn new(funcs: FuncMap) -> Self {
+        Self { funcs }
+    }
+
+    pub fn funcs(&self) -> &FuncMap {
+        &self.funcs
     }
 }
 
 #[derive(Debug)]
-pub enum Func {
-    Named(String, Vec<Spanned<Statement>>),
-    Unnamed(Vec<Spanned<Statement>>),
+pub struct Func {
+    statements: Vec<Spanned<Statement>>,
+}
+
+impl Func {
+    pub fn new(statements: Vec<Spanned<Statement>>) -> Self {
+        Self { statements }
+    }
 }
 
 #[derive(Debug)]
@@ -105,7 +114,10 @@ impl<'a> Parser<'a> {
         let token = self.consume(TokenKind::StringLiteral)?;
 
         if let Token::StringLiteral(string) = &token.value {
-            Ok(Spanned::new(Statement::PushString(string.clone()), token.span))
+            Ok(Spanned::new(
+                Statement::PushString(string.clone()),
+                token.span,
+            ))
         } else {
             unreachable!();
         }
@@ -115,7 +127,10 @@ impl<'a> Parser<'a> {
         let token = self.consume(TokenKind::FuncName)?;
 
         if let Token::FuncName(string) = &token.value {
-            Ok(Spanned::new(Statement::CallFunc(string.clone()), token.span))
+            Ok(Spanned::new(
+                Statement::CallFunc(string.clone()),
+                token.span,
+            ))
         } else {
             unreachable!();
         }
@@ -135,7 +150,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_named_func_decl(&mut self) -> ParserResult<Spanned<Func>> {
+    fn parse_named_func_decl(&mut self) -> ParserResult<(String, Spanned<Func>)> {
         let name = self.consume_func_decl_name()?;
         let mut statements = vec![];
 
@@ -147,18 +162,18 @@ impl<'a> Parser<'a> {
 
         let end_span = self.consume(TokenKind::CloseCurly)?.span;
 
-        Ok(Spanned::new(
-            Func::Named(name.value, statements),
-            Span::unioned(name.span, end_span)
+        Ok((
+            name.value,
+            Spanned::new(Func::new(statements), Span::unioned(name.span, end_span)),
         ))
     }
 
     pub fn parse(&mut self) -> ParserResult<Program> {
-        let mut funcs = vec![];
+        let mut funcs = HashMap::new();
 
         while !self.is_eof() {
-            let func = self.parse_named_func_decl()?;
-            funcs.push(func);
+            let (name, func) = self.parse_named_func_decl()?;
+            funcs.insert(name, func);
         }
 
         Ok(Program::new(funcs))
