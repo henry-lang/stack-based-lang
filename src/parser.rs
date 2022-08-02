@@ -1,14 +1,11 @@
-use crate::error::CompileError;
+use crate::error::{CompileError, CompileResult};
 use crate::tokenizer::{Span, Spanned, Token, TokenKind};
 use std::collections::HashMap;
 
 static EOF: Spanned<Token> = Spanned::empty(Token::Eof);
-static ENTRY_POINT: &str = "main";
 
-type ParserResult<T> = Result<T, CompileError>;
 type FuncMap = HashMap<String, Spanned<Func>>;
 
-#[derive(Debug)]
 pub struct Program {
     funcs: FuncMap,
 }
@@ -18,12 +15,11 @@ impl Program {
         Self { funcs }
     }
 
-    pub fn funcs(&self) -> &FuncMap {
-        &self.funcs
+    pub fn get_func(&self, name: &str) -> Option<&Spanned<Func>> {
+        self.funcs.get(name)
     }
 }
 
-#[derive(Debug)]
 pub struct Func {
     statements: Vec<Spanned<Statement>>,
 }
@@ -38,7 +34,6 @@ impl Func {
     }
 }
 
-#[derive(Debug)]
 pub enum Statement {
     PushNumber(i64),
     PushString(String),
@@ -46,7 +41,6 @@ pub enum Statement {
     CallFunc(String),
 }
 
-#[derive(Debug)]
 pub struct Parser<'a> {
     tokens: &'a [Spanned<Token>],
     pos: usize,
@@ -80,7 +74,7 @@ impl<'a> Parser<'a> {
         token
     }
 
-    fn consume(&mut self, kind: TokenKind) -> ParserResult<&Spanned<Token>> {
+    fn consume(&mut self, kind: TokenKind) -> CompileResult<&Spanned<Token>> {
         let token = self.advance();
 
         if TokenKind::from(token) == kind {
@@ -93,7 +87,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn consume_func_decl_name(&mut self) -> ParserResult<Spanned<String>> {
+    fn consume_func_decl_name(&mut self) -> CompileResult<Spanned<String>> {
         let token = self.consume(TokenKind::FuncDeclName)?;
 
         if let Token::FuncDeclName(name) = &token.value {
@@ -103,7 +97,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_number_literal(&mut self) -> ParserResult<Spanned<Statement>> {
+    fn parse_number_literal(&mut self) -> CompileResult<Spanned<Statement>> {
         let token = self.consume(TokenKind::NumberLiteral)?;
 
         if let Token::NumberLiteral(num) = &token.value {
@@ -113,7 +107,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_string_literal(&mut self) -> ParserResult<Spanned<Statement>> {
+    fn parse_string_literal(&mut self) -> CompileResult<Spanned<Statement>> {
         let token = self.consume(TokenKind::StringLiteral)?;
 
         if let Token::StringLiteral(string) = &token.value {
@@ -126,7 +120,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_func_call(&mut self) -> ParserResult<Spanned<Statement>> {
+    fn parse_func_call(&mut self) -> CompileResult<Spanned<Statement>> {
         let token = self.consume(TokenKind::FuncName)?;
 
         if let Token::FuncName(string) = &token.value {
@@ -139,7 +133,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_statement(&mut self) -> ParserResult<Spanned<Statement>> {
+    fn parse_statement(&mut self) -> CompileResult<Spanned<Statement>> {
         match self.current_kind() {
             TokenKind::NumberLiteral => self.parse_number_literal(),
             TokenKind::StringLiteral => self.parse_string_literal(),
@@ -153,7 +147,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_named_func_decl(&mut self) -> ParserResult<(String, Spanned<Func>)> {
+    fn parse_named_func_decl(&mut self) -> CompileResult<(String, Spanned<Func>)> {
         let name = self.consume_func_decl_name()?;
         let mut statements = vec![];
 
@@ -171,7 +165,7 @@ impl<'a> Parser<'a> {
         ))
     }
 
-    pub fn parse(&mut self) -> ParserResult<Program> {
+    pub fn parse(&mut self) -> CompileResult<Program> {
         let mut funcs = HashMap::new();
 
         while !self.is_eof() {

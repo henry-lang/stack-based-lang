@@ -24,9 +24,10 @@ fn main() {
     let tokens = tokenizer::tokenize(&input).unwrap_or_else(|err| err.log_and_exit(&input));
 
     let mut parser = parser::Parser::new(&tokens[..]);
-    let mut program = parser
+    let program = parser
         .parse()
         .unwrap_or_else(|err| err.log_and_exit(&input));
 
-    println!("{:?}", program);
+    let compiled = codegen::codegen(&program).unwrap_or_else(|err| err.log_and_exit(&input));
+    println!("{compiled}");
 }

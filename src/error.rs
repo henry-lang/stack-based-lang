@@ -3,7 +3,8 @@ use ansi_term::Color::{Blue, Red, White};
 
 use std::borrow::Cow;
 
-#[derive(Debug)]
+pub type CompileResult<T> = Result<T, CompileError>;
+
 pub enum CompileError {
     General(Cow<'static, str>),
     Spanned(Cow<'static, str>, Span),
@@ -17,13 +18,6 @@ impl CompileError {
     }
 
     pub fn log_and_exit(&self, file: &str) -> ! {
-        println!(
-            "{}{}{}",
-            Red.bold().paint("error"),
-            White.bold().paint(": "),
-            White.bold().paint(self.message().as_ref())
-        );
-
         if let Self::Spanned(_, span) = self {
             let line_num = file[..span.0].chars().filter(|x| *x == '\n').count();
             let padding = (line_num.checked_log10().unwrap_or(0) + 4) as usize + span.0;
@@ -39,6 +33,8 @@ impl CompileError {
                 Red.bold().paint("^".repeat(span.len()))
             );
         }
+
+        println!("{}: {}", Red.bold().paint("error"), self.message().as_ref());
 
         std::process::exit(1)
     }
