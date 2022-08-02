@@ -14,7 +14,6 @@ pub struct Program {
 }
 
 impl Program {
-
     pub fn new(funcs: FuncMap) -> Self {
         Self { funcs }
     }
@@ -32,6 +31,10 @@ pub struct Func {
 impl Func {
     pub fn new(statements: Vec<Spanned<Statement>>) -> Self {
         Self { statements }
+    }
+
+    pub fn statements(&self) -> &Vec<Spanned<Statement>> {
+        &self.statements
     }
 }
 
@@ -146,7 +149,7 @@ impl<'a> Parser<'a> {
                     self.current().value
                 ).into(),
                 self.current().span)
-            ) 
+            )
         }
     }
 
