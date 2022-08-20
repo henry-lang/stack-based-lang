@@ -1,5 +1,5 @@
 [package]
-name = "stack-based-lang"
+name = "sbl"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 ansi_term = "0.12.1"
+smol_str = {default-features = false, version = "0.1.23" }

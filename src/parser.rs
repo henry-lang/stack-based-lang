@@ -1,10 +1,12 @@
+use smol_str::SmolStr;
+
 use crate::error::{CompileError, CompileResult};
 use crate::tokenizer::{Span, Spanned, Token, TokenKind};
 use std::collections::HashMap;
 
 static EOF: Spanned<Token> = Spanned::empty(Token::Eof);
 
-type FuncMap = HashMap<String, Spanned<Func>>;
+type FuncMap = HashMap<SmolStr, Spanned<Func>>;
 
 pub struct Program {
     funcs: FuncMap,
@@ -13,6 +15,10 @@ pub struct Program {
 impl Program {
     pub fn new(funcs: FuncMap) -> Self {
         Self { funcs }
+    }
+
+    pub fn has_func(&self, name: &str) -> bool {
+        self.funcs.contains_key(name)
     }
 
     pub fn get_func(&self, name: &str) -> Option<&Spanned<Func>> {
@@ -36,9 +42,9 @@ impl Func {
 
 pub enum Statement {
     PushNumber(i64),
-    PushString(String),
+    PushString(SmolStr), // TODO: Maybe change it back to String judging that a lot of string literals are more than 22 bytes
 
-    CallFunc(String),
+    CallFunc(SmolStr),
 }
 
 pub struct Parser<'a> {
@@ -87,7 +93,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn consume_func_decl_name(&mut self) -> CompileResult<Spanned<String>> {
+    fn consume_func_decl_name(&mut self) -> CompileResult<Spanned<SmolStr>> {
         let token = self.consume(TokenKind::FuncDeclName)?;
 
         if let Token::FuncDeclName(name) = &token.value {
@@ -123,11 +129,8 @@ impl<'a> Parser<'a> {
     fn parse_func_call(&mut self) -> CompileResult<Spanned<Statement>> {
         let token = self.consume(TokenKind::FuncName)?;
 
-        if let Token::FuncName(string) = &token.value {
-            Ok(Spanned::new(
-                Statement::CallFunc(string.clone()),
-                token.span,
-            ))
+        if let Token::FuncName(name) = &token.value {
+            Ok(Spanned::new(Statement::CallFunc(name.clone()), token.span))
         } else {
             unreachable!();
         }
@@ -147,7 +150,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_named_func_decl(&mut self) -> CompileResult<(String, Spanned<Func>)> {
+    fn parse_named_func_decl(&mut self) -> CompileResult<(SmolStr, Spanned<Func>)> {
         let name = self.consume_func_decl_name()?;
         let mut statements = vec![];
 

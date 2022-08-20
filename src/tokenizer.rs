@@ -1,3 +1,5 @@
+use smol_str::SmolStr;
+
 use crate::error::CompileError;
 use std::cmp;
 
@@ -36,10 +38,10 @@ impl<T> Spanned<T> {
 #[derive(Debug)]
 pub enum Token {
     NumberLiteral(i64),
-    StringLiteral(String),
-    FuncName(String),
+    StringLiteral(SmolStr),
+    FuncName(SmolStr),
 
-    FuncDeclName(String), // Example: \function
+    FuncDeclName(SmolStr), // Example: \function
     OpenCurly,
     CloseCurly,
 
